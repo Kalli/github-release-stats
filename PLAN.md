@@ -131,114 +131,91 @@ Some repositories use tags instead of formal releases:
 }
 ```
 
-## Storage Options
+## Storage Format
 
-### Option 1: SQLite Database (Recommended for Analysis)
-
-**Advantages**:
-- SQL queries for complex analysis
-- Efficient indexing for date range queries
-- Built-in aggregation functions
-- Portable single file
-- No external dependencies
-
-**Schema**:
-```sql
-CREATE TABLE repositories (
-    id INTEGER PRIMARY KEY,
-    github_id INTEGER UNIQUE,
-    owner TEXT NOT NULL,
-    name TEXT NOT NULL,
-    full_name TEXT UNIQUE NOT NULL,
-    stars INTEGER,
-    created_at TEXT,
-    language TEXT,
-    topics TEXT,
-    fetched_at TEXT,
-    INDEX idx_stars (stars DESC)
-);
-
-CREATE TABLE releases (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    repo_full_name TEXT NOT NULL,
-    github_release_id INTEGER,
-    tag_name TEXT NOT NULL,
-    release_name TEXT,
-    published_at TEXT NOT NULL,
-    is_prerelease BOOLEAN,
-    is_draft BOOLEAN,
-    semver_compliant BOOLEAN,
-    major_version INTEGER,
-    minor_version INTEGER,
-    patch_version INTEGER,
-    prerelease_tag TEXT,
-    version_type TEXT,
-    changelog_snippet TEXT,
-    source TEXT,
-    FOREIGN KEY (repo_full_name) REFERENCES repositories(full_name),
-    INDEX idx_published_at (published_at),
-    INDEX idx_repo (repo_full_name),
-    INDEX idx_version_type (version_type)
-);
-```
-
-### Option 2: JSON Files
-
-**Structure**:
-- `data/repositories.json` - Array of all repositories
-- `data/releases/{owner}/{repo}.json` - Releases per repository
-
-**Advantages**:
-- Human readable
-- Easy to version control
-- No database setup
-
-**Disadvantages**:
-- Slower queries
-- Need to load entire files for analysis
-
-### Option 3: CSV Files
+### CSV Files (Primary Storage)
 
 **Files**:
-- `repositories.csv`
-- `releases.csv`
+- `data/repositories.csv`
+- `data/releases.csv`
 
 **Advantages**:
-- Easy to import into spreadsheets/Pandas
-- Simple format
+- Easy to import into Pandas for Jupyter notebook analysis
+- Simple format, human readable
+- Can be version controlled
+- No database setup required
 
-**Disadvantages**:
-- Handling nested data (topics, changelog)
-- Slower queries than SQL
+**Handling Nested Data**:
+- Store nested fields (topics, etc.) as JSON strings within CSV cells
+- Example: `topics` column contains `["react", "frontend", "typescript"]`
+- Easy to parse in Python with `json.loads()`
 
-## Implementation Steps
+**CSV Schema**:
 
-1. **Setup**:
-   - Create GitHub Personal Access Token (for authentication)
-   - Choose storage format (recommend SQLite)
-   - Setup rate limiting handling
-   - Setup error logging
+`repositories.csv`:
+```
+github_id,owner,name,full_name,stars,created_at,language,topics,fetched_at
+12345,facebook,react,facebook/react,180000,2013-05-24T00:00:00Z,JavaScript,"[""react"",""frontend""]",2025-12-21T00:00:00Z
+```
 
-2. **Fetch Top Repositories**:
-   - Paginate through search results
-   - Store repository metadata
-   - Handle API errors and retries
+`releases.csv`:
+```
+repo_full_name,github_release_id,tag_name,release_name,published_at,is_prerelease,is_draft,semver_compliant,major_version,minor_version,patch_version,prerelease_tag,version_type,changelog_snippet,source
+facebook/react,12345,v18.2.0,React 18.2.0,2023-06-15T10:30:00Z,false,false,true,18,2,0,,minor,First 500 chars...,release
+```
 
-3. **Fetch Releases for Each Repository**:
-   - Try releases endpoint first
-   - Fallback to tags if no releases
-   - Parse and store release data
-   - Respect rate limits (add delays if needed)
+### Future Migration to SQLite
 
-4. **Parse Versions**:
-   - Extract semver components
-   - Classify version changes
-   - Flag non-compliant versions
+CSV files can be easily imported into SQLite later for more complex queries:
+- Use Pandas `df.to_sql()` for import
+- Or write a simple conversion script
+- Enables efficient date range queries and aggregations
 
-5. **Data Quality**:
-   - Log repositories with no releases
-   - Track parsing failures
-   - Store raw tag_name for manual review
+## Implementation Plan
+
+- [ ] **Project Setup**
+  - [ ] Initialize Python project with `uv`
+  - [ ] Add dependencies (httpx/requests, pandas, semver)
+  - [ ] Create project structure (src/, data/, notebooks/)
+  - [ ] Setup .gitignore for data files and credentials
+
+- [ ] **GitHub API Client**
+  - [ ] Create GitHub API client with authentication
+  - [ ] Implement rate limiting with exponential backoff
+  - [ ] Add retry logic for failed requests
+  - [ ] Setup error logging
+
+- [ ] **Repository Fetcher**
+  - [ ] Implement search API pagination (10 pages × 100 repos)
+  - [ ] Extract and store repository metadata
+  - [ ] Save to `data/repositories.csv`
+  - [ ] Handle API errors gracefully
+
+- [ ] **Release Fetcher**
+  - [ ] Implement releases endpoint fetcher with pagination
+  - [ ] Implement tags endpoint as fallback
+  - [ ] Fetch commit dates for tags
+  - [ ] Save to `data/releases.csv`
+  - [ ] Add progress tracking for 1000 repos
+
+- [ ] **Semantic Version Parser**
+  - [ ] Create regex-based semver parser
+  - [ ] Handle common version prefixes (v, release-, etc.)
+  - [ ] Extract major, minor, patch components
+  - [ ] Classify version bump types
+  - [ ] Flag non-semver versions
+
+- [ ] **Data Quality & Validation**
+  - [ ] Log repositories with no releases/tags
+  - [ ] Track semver parsing failures
+  - [ ] Validate data completeness
+  - [ ] Create summary statistics
+
+- [ ] **Analysis Setup**
+  - [ ] Create Jupyter notebook for exploratory analysis
+  - [ ] Add helper functions for loading CSV data
+  - [ ] Create visualization templates
+  - [ ] (Optional) Add SQLite import script for complex queries
 
 ## Analysis Queries (Examples)
 
@@ -270,21 +247,16 @@ WHERE semver_compliant = 1
 GROUP BY version_type, period;
 ```
 
-## Timeline Estimate
 
-- Setup and initial code: 2-4 hours
-- Fetching repositories: ~10 minutes (with rate limits)
-- Fetching releases: 1-3 hours (with rate limits, ~2-5 requests/second)
-- Data parsing and storage: Concurrent with fetching
-- **Total data collection time: 2-4 hours**
+## Tech Stack
 
-## Recommended Tech Stack
-
-- **Language**: Python or Node.js
-- **HTTP Client**: `requests` (Python) or `octokit` (Node.js)
-- **Database**: SQLite with `sqlite3` module
-- **Version Parsing**: `semver` library
+- **Language**: Python 3.11+
+- **Package Manager**: `uv` for fast dependency management
+- **HTTP Client**: `httpx` (async support) or `requests`
+- **Data Processing**: `pandas` for CSV handling and analysis
+- **Version Parsing**: `semver` library or custom regex
 - **Rate Limiting**: Built-in retry logic with exponential backoff
+- **Analysis**: Jupyter notebooks for exploratory data analysis
 
 ## Notes
 
