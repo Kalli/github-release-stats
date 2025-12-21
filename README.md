@@ -68,7 +68,78 @@ github-release-stats/
 
 ## Getting Started
 
-See [PLAN.md](PLAN.md) for detailed implementation steps and API documentation.
+### Prerequisites
+
+1. **Python 3.11+** installed on your system
+2. **uv** package manager ([installation guide](https://github.com/astral-sh/uv))
+3. **GitHub Personal Access Token** for API access
+
+### Setup
+
+1. Clone the repository:
+```bash
+git clone <repository-url>
+cd github-release-stats
+```
+
+2. Install dependencies using uv:
+```bash
+uv sync
+```
+
+3. Create a GitHub Personal Access Token:
+   - Go to https://github.com/settings/tokens
+   - Create a new token with `public_repo` scope
+   - Copy the token
+
+4. Set up your environment:
+```bash
+cp .env.example .env
+# Edit .env and add your GitHub token
+```
+
+### Usage
+
+#### Fetch Top Repositories
+
+Fetch the top 1000 most starred GitHub repositories:
+
+```bash
+# Basic usage (with token in .env or GITHUB_TOKEN environment variable)
+uv run python src/fetch_repositories.py
+
+# Or export token directly
+export GITHUB_TOKEN=your_token_here
+uv run python src/fetch_repositories.py
+
+# Custom output file
+uv run python src/fetch_repositories.py -o custom_repos.csv
+
+# Fetch different number of repos
+uv run python src/fetch_repositories.py -n 500
+
+# Force overwrite without prompting
+uv run python src/fetch_repositories.py --force
+```
+
+**Options:**
+- `-o, --output FILE` - Output CSV file (default: `data/repositories.csv`)
+- `-n, --number N` - Number of repositories to fetch (default: 1000)
+- `--force` - Force overwrite without prompting
+
+**Output:**
+The script creates a CSV file with the following columns:
+- `github_id` - GitHub repository ID
+- `owner` - Repository owner
+- `name` - Repository name
+- `full_name` - Full name (owner/repo)
+- `stars` - Number of stars
+- `created_at` - Repository creation date
+- `language` - Primary programming language
+- `topics` - Repository topics (JSON array)
+- `fetched_at` - Timestamp of data collection
+
+For more details, see [PLAN.md](PLAN.md).
 
 ## Research Context
 

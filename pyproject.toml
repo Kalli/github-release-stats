@@ -1,0 +1,9 @@
+[project]
+name = "github-release-stats"
+version = "0.1.0"
+description = "Analyze release cadence patterns in top GitHub repositories"
+requires-python = ">=3.11"
+dependencies = [
+    "requests>=2.31.0",
+    "pandas>=2.0.0",
+]
