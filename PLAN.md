@@ -173,14 +173,14 @@ CSV files can be easily imported into SQLite later for more complex queries:
 
 ## Implementation Plan
 
-- [ ] **Project Setup**
-  - [ ] Initialize Python project with `uv`
-  - [ ] Add dependencies (httpx/requests, pandas, semver)
-  - [ ] Create project structure (src/, data/, notebooks/)
-  - [ ] Setup .gitignore for data files and credentials
+- [x] **Project Setup**
+  - [x] Initialize Python project with `uv`
+  - [x] Add dependencies (requests, pandas, semver)
+  - [x] Create project structure (src/, data/, notebooks/)
+  - [x] Setup .gitignore for data files and credentials
 
 - [ ] **GitHub API Client**
-  - [ ] Create GitHub API client with authentication
+  - [x] Create GitHub API client with authentication
   - [ ] Implement rate limiting with exponential backoff
   - [ ] Add retry logic for failed requests
   - [ ] Setup error logging
