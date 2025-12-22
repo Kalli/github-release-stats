@@ -171,7 +171,7 @@ def fetch_all_repositories(
             data = fetch_repositories_page(page, per_page, token)
 
             if "items" not in data:
-                print(f"❌ Error: No 'items' in response")
+                print("❌ Error: No 'items' in response")
                 break
 
             for repo in data["items"]:
