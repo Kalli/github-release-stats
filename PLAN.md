@@ -279,16 +279,26 @@ Will take hours and may crash/timeout.
 
 1. **Resume Logic**:
    ```python
-   def load_processed_repos(releases_csv: Path) -> set:
-       """Load set of repos already processed."""
-       if not releases_csv.exists():
-           return set()
-
+   def load_processed_repos(releases_csv: Path, no_releases_file: Path) -> set:
+       """Load set of repos already processed (with or without releases)."""
        processed = set()
-       with open(releases_csv, 'r') as f:
-           reader = csv.DictReader(f)
-           for row in reader:
-               processed.add(row['repo_full_name'])
+
+       # Load repos that had releases/tags
+       if releases_csv.exists():
+           with open(releases_csv, 'r') as f:
+               reader = csv.DictReader(f)
+               for row in reader:
+                   processed.add(row['repo_full_name'])
+
+       # Load repos that had NO releases/tags
+       if no_releases_file.exists():
+           with open(no_releases_file, 'r') as f:
+               for line in f:
+                   line = line.strip()
+                   if line and not line.startswith('owner/repo'):  # Skip header
+                       repo_name = line.split(',')[0]
+                       processed.add(repo_name)
+
        return processed
    ```
 
