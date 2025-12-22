@@ -37,15 +37,6 @@ ENV/
 .ipynb_checkpoints
 *.ipynb_checkpoints/
 
-# Data files
-data/*.csv
-data/*.json
-data/*.db
-data/*.sqlite
-data/*.sqlite3
-
-# Keep data directory structure
-!data/.gitkeep
 
 # Credentials and secrets
 .env
