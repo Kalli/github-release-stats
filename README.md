@@ -6,15 +6,14 @@ A research project to analyze release cadence patterns in the top 1000 most star
 
 This project investigates whether software release cadence has accelerated following two significant dates in the tech industry:
 
-1. **November 30, 2022** - The release of ChatGPT and the beginning of widespread AI-assisted development
-2. **February 24, 2025** - [Future analysis date]
+1. **November 30, 2022** - The release of ChatGPT
+2. **February 24, 2025** - Claude Code Released
 
 By collecting and analyzing release metadata from the most popular open-source repositories, we aim to understand:
 
 - Has the average time between releases decreased?
 - Are major/minor/patch releases happening more frequently?
 - Do different types of projects show different patterns?
-- Is there a correlation between AI tool adoption and release velocity?
 
 ## Methodology
 
@@ -143,4 +142,4 @@ For more details, see [PLAN.md](PLAN.md).
 
 ## Research Context
 
-This project was inspired by anecdotal evidence from developers reporting increased shipping velocity after adopting AI coding assistants. By analyzing real-world release data from the most popular open-source projects, we aim to provide empirical evidence to support or refute these observations.
+This project was inspired by anecdotal evidence from developers reporting increased shipping velocity after adopting AI coding assistants. By analyzing real-world release data from the most popular open-source projects, we aim to inspect empirical evidence for such observations.
