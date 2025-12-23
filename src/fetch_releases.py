@@ -132,6 +132,7 @@ def check_rate_limit_and_wait(response: requests.Response) -> None:
 def fetch_with_retry(
     url: str,
     headers: Dict[str, str],
+    params: Optional[Dict[str, Any]] = None,
     max_retries: int = 3,
     timeout: int = 10
 ) -> Optional[requests.Response]:
@@ -141,6 +142,7 @@ def fetch_with_retry(
     Args:
         url: URL to fetch
         headers: Request headers
+        params: Optional query parameters
         max_retries: Maximum number of retry attempts
         timeout: Request timeout in seconds
 
@@ -149,7 +151,7 @@ def fetch_with_retry(
     """
     for attempt in range(max_retries):
         try:
-            response = requests.get(url, headers=headers, timeout=timeout)
+            response = requests.get(url, headers=headers, params=params, timeout=timeout)
             response.raise_for_status()
 
             # Check and handle rate limiting
@@ -205,7 +207,7 @@ def fetch_releases_page(
     url = f"{GITHUB_API_BASE}/repos/{owner}/{repo}/releases"
     params = {"per_page": per_page, "page": page}
 
-    response = fetch_with_retry(url, headers)
+    response = fetch_with_retry(url, headers, params)
     if response is None:
         return [], False
 
@@ -277,7 +279,7 @@ def fetch_tags_page(
     url = f"{GITHUB_API_BASE}/repos/{owner}/{repo}/tags"
     params = {"per_page": per_page, "page": page}
 
-    response = fetch_with_retry(url, headers)
+    response = fetch_with_retry(url, headers, params)
     if response is None:
         return [], False
 
