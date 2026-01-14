@@ -178,6 +178,17 @@ def fetch_with_retry(
                 if attempt < max_retries - 1:
                     continue
                 raise
+            elif e.response.status_code >= 500:
+                # Server error - retry with backoff
+                if attempt < max_retries - 1:
+                    wait = 2 ** attempt  # 1s, 2s, 4s
+                    print(f"⏳ Server error (5xx), retrying in {wait}s... (attempt {attempt + 1}/{max_retries})")
+                    time.sleep(wait)
+                    continue
+                else:
+                    # After all retries failed, return None to signal partial failure
+                    print(f"❌ Server error after {max_retries} attempts")
+                    return None
             else:
                 raise
 
@@ -237,13 +248,18 @@ def fetch_all_releases(
         per_page: Releases per page
 
     Returns:
-        List of all releases
+        List of all releases (may be partial if pagination fails)
     """
     all_releases = []
     page = 1
 
     while True:
         releases, has_next = fetch_releases_page(owner, repo, page, per_page, headers)
+
+        # If we got an empty response but we're not on page 1, might be an error
+        if not releases and page > 1 and all_releases:
+            print(f"⚠️  Pagination stopped at page {page}, returning {len(all_releases)} releases collected so far")
+            break
 
         all_releases.extend(releases)
 
@@ -337,7 +353,7 @@ def fetch_all_tags(
         per_page: Tags per page
 
     Returns:
-        List of all tags with commit dates
+        List of all tags with commit dates (may be partial if pagination fails)
     """
     all_tags = []
     page = 1
@@ -345,6 +361,12 @@ def fetch_all_tags(
     # First pass: fetch all tags (fast)
     while True:
         tags, has_next = fetch_tags_page(owner, repo, page, per_page, headers)
+
+        # If we got an empty response but we're not on page 1, might be an error
+        if not tags and page > 1 and all_tags:
+            print(f"⚠️  Tag pagination stopped at page {page}, returning {len(all_tags)} tags collected so far")
+            break
+
         all_tags.extend(tags)
 
         if not has_next or len(tags) < per_page:
