@@ -679,7 +679,7 @@ Examples:
     initialize_csv_files(args.output, args.no_releases_file)
 
     # Load already processed repos
-    print(f"\n🔍 Checking for already processed repositories...")
+    print("\n🔍 Checking for already processed repositories...")
     processed_repos = load_processed_repos(args.output, args.no_releases_file)
     print(f"✓ Found {len(processed_repos)} already processed")
 
@@ -748,7 +748,7 @@ Examples:
         sys.exit(1)
 
     # Final summary
-    print(f"\n📊 Summary:")
+    print("\n📊 Summary:")
     print(f"   Total processed: {stats['total_processed']}")
     print(f"   Repos with releases: {stats['repos_with_releases']}")
     print(f"   Repos with tags only: {stats['repos_with_tags_only']}")
