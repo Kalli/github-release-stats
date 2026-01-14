@@ -342,17 +342,9 @@ def fetch_all_tags(
     all_tags = []
     page = 1
 
+    # First pass: fetch all tags (fast)
     while True:
         tags, has_next = fetch_tags_page(owner, repo, page, per_page, headers)
-
-        # Fetch commit date for each tag
-        for tag in tags:
-            sha = tag.get('commit', {}).get('sha')
-            if sha:
-                commit_date = fetch_commit_date(owner, repo, sha, headers)
-                tag['commit_date'] = commit_date
-                time.sleep(0.1)  # Small delay between commit fetches
-
         all_tags.extend(tags)
 
         if not has_next or len(tags) < per_page:
@@ -360,6 +352,24 @@ def fetch_all_tags(
 
         page += 1
         time.sleep(0.2)  # Small delay between pages
+
+    if not all_tags:
+        return all_tags
+
+    # Second pass: fetch commit dates (slow, with progress)
+    total_tags = len(all_tags)
+    print(f"found {total_tags} tags, fetching dates: ", end="", flush=True)
+    
+    for i, tag in enumerate(all_tags, 1):
+        sha = tag.get('commit', {}).get('sha')
+        if sha:
+            commit_date = fetch_commit_date(owner, repo, sha, headers)
+            tag['commit_date'] = commit_date
+            time.sleep(0.1)  # Small delay between commit fetches
+            
+            # Show progress every 10 tags or at the end
+            if i % 10 == 0 or i == total_tags:
+                print(f"{i}/{total_tags}...", end="", flush=True)
 
     return all_tags
 
