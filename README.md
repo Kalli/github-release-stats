@@ -138,6 +138,44 @@ The script creates a CSV file with the following columns:
 - `topics` - Repository topics (JSON array)
 - `fetched_at` - Timestamp of data collection
 
+#### Fetch Releases
+
+Fetch release data for repositories (with crash recovery):
+
+```bash
+# Basic usage (processes all repos from repositories.csv)
+uv run python src/fetch_releases.py
+
+# Test with a few repositories first
+uv run python src/fetch_releases.py -n 10
+
+# Custom files
+uv run python src/fetch_releases.py -i repos.csv -o releases.csv
+
+# Adjust delay between repos (default 0.5s)
+uv run python src/fetch_releases.py --delay 1.0
+```
+
+**Options:**
+- `-i, --input FILE` - Input repositories CSV (default: `data/repositories.csv`)
+- `-o, --output FILE` - Output releases CSV (default: `data/releases.csv`)
+- `-n, --limit N` - Limit number of repositories to process (for testing)
+- `--delay SECONDS` - Delay between repositories (default: 0.5)
+- `--no-releases-file FILE` - Log for repos without releases (default: `data/no_releases.txt`)
+- `--progress-file FILE` - Progress tracking JSON (default: `data/fetch_progress.json`)
+
+**Features:**
+- **Crash Recovery**: Automatically resumes from where it left off if interrupted
+- **Incremental Saving**: Saves data after each repository to prevent data loss
+- **Smart Fallback**: Falls back to tags if no formal releases exist
+- **Progress Tracking**: Shows progress and saves statistics to JSON file
+- **Rate Limiting**: Automatically handles GitHub API rate limits
+
+**Output Files:**
+- `data/releases.csv` - All releases/tags with metadata
+- `data/no_releases.txt` - Repositories without any releases
+- `data/fetch_progress.json` - Progress statistics and last processed repo
+
 For more details, see [PLAN.md](PLAN.md).
 
 ## Research Context
