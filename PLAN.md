@@ -181,9 +181,9 @@ CSV files can be easily imported into SQLite later for more complex queries:
 
 - [ ] **GitHub API Client**
   - [x] Create GitHub API client with authentication
-  - [ ] Implement rate limiting with exponential backoff
-  - [ ] Add retry logic for failed requests
-  - [ ] Setup error logging
+  - [x] Implement rate limiting with exponential backoff
+  - [x] Add retry logic for failed requests
+  - [x] Setup error logging
 
 - [x] **Repository Fetcher**
   - [x] Implement search API pagination (10 pages × 100 repos)
@@ -191,15 +191,15 @@ CSV files can be easily imported into SQLite later for more complex queries:
   - [x] Save to `data/repositories.csv`
   - [x] Handle API errors gracefully
 
-- [ ] **Release Fetcher**
-  - [ ] Implement releases endpoint fetcher with pagination
-  - [ ] Implement tags endpoint as fallback
-  - [ ] Fetch commit dates for tags
-  - [ ] Save to `data/releases.csv`
-  - [ ] Add progress tracking for 1000 repos
-  - [ ] Implement incremental CSV saving (resume from crashes)
-  - [ ] Add retry logic with exponential backoff
-  - [ ] Track repos with no releases separately
+- [x] **Release Fetcher**
+  - [x] Implement releases endpoint fetcher with pagination
+  - [x] Implement tags endpoint as fallback
+  - [x] Fetch commit dates for tags
+  - [x] Save to `data/releases.csv`
+  - [x] Add progress tracking for 1000 repos
+  - [x] Implement incremental CSV saving (resume from crashes)
+  - [x] Add retry logic with exponential backoff
+  - [x] Track repos with no releases separately
 
 ### Release Fetcher - Detailed Implementation Plan
 
