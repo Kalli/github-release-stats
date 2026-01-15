@@ -179,11 +179,11 @@ CSV files can be easily imported into SQLite later for more complex queries:
   - [x] Create project structure (src/, data/, notebooks/)
   - [x] Setup .gitignore for data files and credentials
 
-- [ ] **GitHub API Client**
+- [x] **GitHub API Client**
   - [x] Create GitHub API client with authentication
-  - [ ] Implement rate limiting with exponential backoff
-  - [ ] Add retry logic for failed requests
-  - [ ] Setup error logging
+  - [x] Implement rate limiting with exponential backoff
+  - [x] Add retry logic for failed requests
+  - [x] Setup error logging
 
 - [x] **Repository Fetcher**
   - [x] Implement search API pagination (10 pages × 100 repos)
@@ -191,12 +191,16 @@ CSV files can be easily imported into SQLite later for more complex queries:
   - [x] Save to `data/repositories.csv`
   - [x] Handle API errors gracefully
 
-- [ ] **Release Fetcher**
-  - [ ] Implement releases endpoint fetcher with pagination
-  - [ ] Implement tags endpoint as fallback
-  - [ ] Fetch commit dates for tags
-  - [ ] Save to `data/releases.csv`
-  - [ ] Add progress tracking for 1000 repos
+- [x] **Release Fetcher** (`src/fetch_releases.py`)
+  - [x] Implement releases endpoint fetcher with pagination
+  - [x] Implement tags endpoint as fallback
+  - [x] Fetch commit dates for tags (with progress indicator)
+  - [x] Save to `data/releases.csv`
+  - [x] Add progress tracking to `data/fetch_progress.json`
+  - [x] Implement incremental CSV saving (resume from crashes)
+  - [x] Add retry logic with exponential backoff
+  - [x] Track repos with no releases in `data/no_releases.txt`
+  - [x] Handle 5xx server errors gracefully with partial result saving
 
 - [ ] **Semantic Version Parser**
   - [ ] Create regex-based semver parser
