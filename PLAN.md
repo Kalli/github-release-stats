@@ -66,29 +66,191 @@ Some repositories use tags instead of formal releases:
 - Additional requests for commit details if using tags
 - Estimated total: 2,000-5,000 requests
 
-### Step 3: Parse Semantic Versioning
+### Step 3: Parse Semantic Versioning and Version Schemes
 
-**Semantic Version Regex**:
+After analyzing the `data/releases.csv` (~171K releases), we've identified diverse versioning patterns that need categorization and parsing strategies.
+
+#### Observed Versioning Patterns
+
+1. **Empty Release Names** (~46K releases)
+   - These rely solely on `tag_name` for version identification
+   - Strategy: Parse `tag_name` instead of `release_name`
+
+2. **Semantic Versioning (SemVer)** - Most common
+   - Standard: `1.0.0`, `v2.3.1`, `v16.8.6`
+   - With pre-release: `v16.9.0-alpha.0`, `v16.9.0-rc.0`, `3.1.0-rc.8`, `4.17.0-alpha.1`
+   - With build metadata: `1.0.0+20130313144700`
+   - Variants: `0.15.0-beta.12`, `10.2.0-beta.5`
+
+3. **Calendar Versioning (CalVer)**
+   - Year.Month: `2025.12.0`, `2020.10`
+   - Year.Month.Patch: `2025.12.5`
+   - With beta: `2026.1.0b2`, `2025.12.0b9`
+   - Date format: `2025-05-21`, `October 2022`
+   - Weekly: `weekly.2024.22`
+   - Extended: `22000.348.40.7` (possibly build numbers)
+
+4. **Package-Scoped Versions**
+   - NPM-style: `@gradio/chatbot@0.26.16`, `@astrojs/react@2.3.2`, `@pankod/refine-core@3.76.0`
+   - Python-style: `langchain-community==0.3.1`
+   - Product prefix: `eslint-plugin-react-hooks@5.0.0`
+
+5. **Product-Named Releases**
+   - Format: `ProductName vX.Y.Z`
+   - Examples: `Bun v1.1.39`, `Hyperswitch v1.18.0`, `Ventoy 1.0.67 release`
+   - With separator: `puppeteer: v19.7.1`, `electron v23.3.7`
+
+6. **Development Builds**
+   - Nightly: `Nightly build 2026.01.03`, `v7.0.1-nightly.20230405`
+   - Canary: `v13.2.5-canary.32`, `Turborepo v2.7.5-canary.2`
+   - Dev: `v1.68.1.dev2`, `v1.77.7.dev10`
+   - Snapshot: `snapshot-2023-11-12`
+
+7. **Descriptive/Named Releases**
+   - Generic: `Bugfix Release`, `Minor Bug Fix Release`, `Major Feature Release`
+   - Specific: `Better traceback formatting`, `Support for unicode letters.`
+   - With version: `Release v1.6.2`, `Release 1.3.2`
+   - Product releases: `Brackets 1.13`, `Metabase 0.23.0`, `Elasticsearch 6.8.23`
+
+8. **Non-Standard Formats**
+   - Build numbers only: `b6119`
+   - Milestone: `Kotlin M7`
+   - Simple major: `4.0`, `Roadmap 4.0`
+
+#### Parsing Strategy
+
+**Phase 1: Version Scheme Detection**
+
+Use a waterfall approach to classify each release into one of these categories:
+
+```python
+1. Check if release_name is empty → use tag_name
+2. Try SemVer parsing (strictest)
+3. Try CalVer detection (date patterns)
+4. Try package-scoped extraction (@package@version, package==version)
+5. Try product-named extraction (ProductName vX.Y.Z)
+6. Try development build detection (nightly, canary, dev, snapshot)
+7. Try "Release vX.Y.Z" pattern extraction
+8. Flag as descriptive/non-parseable
+```
+
+**Phase 2: Component Extraction**
+
+For each detected scheme, extract:
+
+**SemVer Components**:
 ```regex
 ^v?(\d+)\.(\d+)\.(\d+)(?:-([0-9A-Za-z-]+(?:\.[0-9A-Za-z-]+)*))?(?:\+([0-9A-Za-z-]+(?:\.[0-9A-Za-z-]+)*))?$
 ```
+- Prefix: `v`, `release-`, `version-` (or none)
+- Major: `\d+`
+- Minor: `\d+`
+- Patch: `\d+`
+- Pre-release: `alpha`, `beta`, `rc`, `canary`, `dev`, `nightly`, etc.
+- Build metadata: anything after `+`
 
-**Parsing Logic**:
-- Extract major, minor, patch from version string
-- Handle common prefixes: `v`, `release-`, `version-`
-- Detect version type changes:
-  - Major: X.0.0 (X changes)
-  - Minor: X.Y.0 (Y changes, X same)
-  - Patch: X.Y.Z (Z changes, X.Y same)
-- Flag non-semver releases for separate analysis
+**CalVer Components**:
+```regex
+^(\d{4})\.(\d{1,2})(?:\.(\d+))?(?:b(\d+))?$
+```
+- Year: `YYYY`
+- Month: `MM`
+- Micro/Patch: optional
+- Beta suffix: optional
 
-**Version Classification**:
-- `semver_compliant`: boolean
+**Package-Scoped**:
+```regex
+(@?[^@]+)@(.+)
+```
+- Package name: everything before final `@` or before `==`
+- Version: everything after (parse as SemVer/CalVer)
+
+**Product-Named**:
+```regex
+^(.+?)\s+v?(\d+\.\d+(?:\.\d+)?.*)$
+```
+- Product name: initial text
+- Version: remainder (parse as SemVer/CalVer)
+
+#### Output Schema Enhancement
+
+Add these fields to `releases.csv`:
+
+**Classification Fields**:
+- `version_scheme`: `semver` | `calver` | `package_scoped` | `product_named` | `dev_build` | `descriptive` | `unknown`
+- `parseable`: boolean (whether we could extract version components)
+
+**Version Components** (nullable):
 - `major_version`: integer
 - `minor_version`: integer
 - `patch_version`: integer
-- `prerelease`: string (alpha, beta, rc, etc.)
+- `year`: integer (for CalVer)
+- `month`: integer (for CalVer)
+
+**Metadata Fields**:
+- `version_prefix`: `v`, `release-`, etc.
+- `prerelease_tag`: `alpha`, `beta`, `rc`, `canary`, `nightly`, `dev`, etc.
+- `prerelease_number`: integer (e.g., `alpha.1` → `1`)
 - `build_metadata`: string
+- `is_dev_build`: boolean (nightly/canary/dev/snapshot)
+- `product_name`: string (extracted product name, if applicable)
+- `package_name`: string (extracted package name, if scoped)
+
+**Version Type Classification** (for SemVer only):
+- `version_type`: `major` | `minor` | `patch` | `prerelease` | `unknown`
+  - Requires comparing with previous release to detect bump type
+  - Initial implementation can skip this, add in analysis phase
+
+#### Implementation Approach
+
+**Step 3.1: Create Version Parser Module** (`src/parse_versions.py`)
+- Implement detection waterfall
+- Create regex patterns for each scheme
+- Build extraction functions for each type
+- Handle edge cases (malformed versions, unusual formats)
+
+**Step 3.2: Enhance CSV with Parsed Data**
+- Read existing `data/releases.csv`
+- Apply parser to each row
+- Add new columns with parsed components
+- Save enhanced version (or create new file `data/releases_parsed.csv`)
+
+**Step 3.3: Generate Parsing Report**
+- Count releases by `version_scheme`
+- Report parsing success rate (`parseable=true` %)
+- Log unparseable versions to `data/unparseable_versions.txt` for manual review
+- Create summary statistics
+
+**Step 3.4: Quality Validation**
+- Validate that major.minor.patch are numeric where present
+- Check for anomalies (e.g., major version > 1000)
+- Verify CalVer years are reasonable (e.g., 2010-2026)
+- Flag suspicious patterns for review
+
+#### Edge Cases to Handle
+
+1. **Multiple versions in one name**: `"19.1.4 (December 11th, 2024)"` → extract `19.1.4`
+2. **Emoji and special chars**: `Inso CLI 2.9.0-beta.0 📦` → strip emoji
+3. **Case variations**: `v1.0.0` vs `V1.0.0` vs `Version 1.0.0`
+4. **Whitespace**: Leading/trailing spaces
+5. **Quotes**: CSV escaping may include quotes
+6. **Incomplete versions**: `v1.0` (assume `.0` for patch)
+7. **Very long versions**: `v1.2.3.4.5.6` (take first 3 components)
+
+#### Success Metrics
+
+- **Target**: Successfully parse 85%+ of releases
+- **SemVer detection**: Should catch most v-prefixed and X.Y.Z patterns
+- **CalVer detection**: Should catch YYYY.MM patterns
+- **Fallback coverage**: Descriptive category should be < 15%
+
+#### Testing Strategy
+
+- Create unit tests with known version strings
+- Test each regex pattern independently
+- Validate edge cases
+- Test full pipeline with sample data (100 rows)
+- Review unparseable versions for pattern discovery
 
 ## Data Schema
 
