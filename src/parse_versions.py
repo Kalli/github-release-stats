@@ -114,7 +114,7 @@ PACKAGE_SCOPED_PATTERN = re.compile(
 PRODUCT_NAMED_PATTERN = re.compile(
     r"""
     ^
-    (?P<product>.+?)                             # Product name (non-greedy)
+    (?P<product>.+?):?                           # Product name (non-greedy)
     \s+                                          # Whitespace
     (?::|\s)?                                    # Optional colon separator
     \s*
