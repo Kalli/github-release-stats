@@ -44,20 +44,30 @@ class VersionInfo:
 
 # Regex patterns with named groups and verbose mode for readability
 
-# SemVer pattern (strict): v?MAJOR.MINOR.PATCH[-PRERELEASE][+BUILD]
+# SemVer pattern: [PREFIX-]v?MAJOR.MINOR.PATCH[.BUILD][-PRERELEASE][+BUILD]
+# Supports 4-part versions and prerelease without dash (e.g., v3.10.0a5)
 SEMVER_PATTERN = re.compile(
     r"""
     ^
-    (?P<prefix>v|V|version[-_]?|release[-_]?)?  # Optional prefix
+    (?P<prefix>
+        [\w-]+-v|[\w-]+-V|                       # Prefix with dash (e.g., nw-v, release-v)
+        v|V|version[-_]?|release[-_]?            # Standard prefixes
+    )?
     (?P<major>\d+)                               # Major version (required)
     \.
     (?P<minor>\d+)                               # Minor version (required)
     \.
     (?P<patch>\d+)                               # Patch version (required)
     (?:
-        -                                        # Prerelease separator
+        \.
+        (?P<build_num>\d+)                       # Optional 4th number (build/security patch)
+    )?
+    (?:
+        -?                                       # Optional prerelease separator (dash)
         (?P<prerelease>
-            [0-9A-Za-z-]+(?:\.[0-9A-Za-z-]+)*   # Prerelease identifiers
+            [a-zA-Z]+\d*                         # Prerelease without separator (e.g., a5, alpha5)
+            |                                    # OR
+            [0-9A-Za-z-]+(?:\.[0-9A-Za-z-]+)*   # Standard prerelease identifiers
         )
     )?
     (?:
@@ -66,9 +76,10 @@ SEMVER_PATTERN = re.compile(
             [0-9A-Za-z-]+(?:\.[0-9A-Za-z-]+)*   # Build metadata
         )
     )?
+    (?:\s+Release)?                              # Optional " Release" suffix
     $
     """,
-    re.VERBOSE
+    re.VERBOSE | re.IGNORECASE
 )
 
 # CalVer pattern: YYYY.MM[.DD[.HH]][bN]
@@ -144,10 +155,18 @@ DEV_BUILD_PATTERN = re.compile(
 )
 
 # Prerelease tag extraction
+# Supports both full names (alpha, beta) and short forms (a, b)
 PRERELEASE_TAG_PATTERN = re.compile(
     r"""
     ^
-    (?P<tag>alpha|beta|rc|canary|nightly|dev)    # Tag name
+    (?P<tag>
+        alpha|a|                                 # Alpha (full or short)
+        beta|b|                                  # Beta (full or short)
+        rc|                                      # Release candidate
+        canary|                                  # Canary
+        nightly|                                 # Nightly
+        dev                                      # Dev
+    )
     (?:\.|-)?                                    # Optional separator
     (?P<number>\d+)?                             # Optional number
     """,
@@ -181,6 +200,11 @@ def extract_prerelease_info(prerelease: str) -> tuple[str, Optional[int]]:
     match = PRERELEASE_TAG_PATTERN.match(prerelease)
     if match:
         tag = match.group('tag').lower()
+
+        # Normalize short forms to full names
+        tag_map = {'a': 'alpha', 'b': 'beta'}
+        tag = tag_map.get(tag, tag)
+
         number_str = match.group('number')
         number = int(number_str) if number_str else None
         return tag, number
@@ -208,13 +232,21 @@ def try_parse_semver(version: str) -> Optional[VersionInfo]:
     info.minor_version = int(match.group('minor'))
     info.patch_version = int(match.group('patch'))
 
+    # Extract 4th version number (build/security patch) if present
+    build_num = match.group('build_num')
+    if build_num:
+        # Store in build_metadata as "build.N"
+        info.build_metadata = f"build.{build_num}"
+
     # Extract prerelease info
     prerelease = match.group('prerelease') or ""
     if prerelease:
         info.prerelease_tag, info.prerelease_number = extract_prerelease_info(prerelease)
 
-    # Build metadata
-    info.build_metadata = match.group('build') or ""
+    # Build metadata from + separator (overrides build_num if both present)
+    build = match.group('build')
+    if build:
+        info.build_metadata = build
 
     # Check if it's a dev build
     if DEV_BUILD_PATTERN.search(prerelease):

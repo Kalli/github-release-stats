@@ -119,6 +119,56 @@ class TestSemVerParsing:
         assert result.version_prefix == "V"
         assert result.major_version == 3
 
+    def test_semver_prerelease_without_dash(self):
+        """Test prerelease without dash separator (e.g., v3.10.0a5)."""
+        result = try_parse_semver("v3.10.0a5")
+        assert result is not None
+        assert result.major_version == 3
+        assert result.minor_version == 10
+        assert result.patch_version == 0
+        assert result.prerelease_tag == "alpha"
+        assert result.prerelease_number == 5
+
+    def test_semver_short_alpha(self):
+        """Test short alpha form (a instead of alpha)."""
+        result = try_parse_semver("1.2.3a1")
+        assert result is not None
+        assert result.prerelease_tag == "alpha"
+        assert result.prerelease_number == 1
+
+    def test_semver_short_beta(self):
+        """Test short beta form (b instead of beta)."""
+        result = try_parse_semver("2.0.0b3")
+        assert result is not None
+        assert result.prerelease_tag == "beta"
+        assert result.prerelease_number == 3
+
+    def test_semver_four_part_version(self):
+        """Test 4-part version number (e.g., v6.0.3.4)."""
+        result = try_parse_semver("v6.0.3.4")
+        assert result is not None
+        assert result.major_version == 6
+        assert result.minor_version == 0
+        assert result.patch_version == 3
+        assert result.build_metadata == "build.4"
+
+    def test_semver_prefix_with_dash(self):
+        """Test prefix with dash (e.g., nw-v0.22.0)."""
+        result = try_parse_semver("nw-v0.22.0")
+        assert result is not None
+        assert result.version_prefix == "nw-v"
+        assert result.major_version == 0
+        assert result.minor_version == 22
+        assert result.patch_version == 0
+
+    def test_semver_with_release_suffix(self):
+        """Test version with 'Release' suffix (e.g., 0.44.0 Release)."""
+        result = try_parse_semver("0.44.0 Release")
+        assert result is not None
+        assert result.major_version == 0
+        assert result.minor_version == 44
+        assert result.patch_version == 0
+
     def test_invalid_semver_missing_patch(self):
         result = try_parse_semver("1.2")
         assert result is None
@@ -327,6 +377,44 @@ class TestRealWorldExamples:
                 f"Failed for '{version_str}': expected {expected_scheme}, got {result.version_scheme}"
             assert result.parseable == expected_parseable, \
                 f"Failed for '{version_str}': expected parseable={expected_parseable}, got {result.parseable}"
+
+    def test_edge_cases_from_issues(self):
+        """Test specific edge cases that were initially failing."""
+        # Test v3.10.0a5 - prerelease without dash separator
+        result = parse_version("v3.10.0a5")
+        assert result.version_scheme == "semver"
+        assert result.parseable is True
+        assert result.major_version == 3
+        assert result.minor_version == 10
+        assert result.patch_version == 0
+        assert result.prerelease_tag == "alpha"
+        assert result.prerelease_number == 5
+
+        # Test v6.0.3.4 - four-part version number
+        result = parse_version("v6.0.3.4")
+        assert result.version_scheme == "semver"
+        assert result.parseable is True
+        assert result.major_version == 6
+        assert result.minor_version == 0
+        assert result.patch_version == 3
+        assert result.build_metadata == "build.4"
+
+        # Test nw-v0.22.0 - prefix with dash
+        result = parse_version("nw-v0.22.0")
+        assert result.version_scheme == "semver"
+        assert result.parseable is True
+        assert result.version_prefix == "nw-v"
+        assert result.major_version == 0
+        assert result.minor_version == 22
+        assert result.patch_version == 0
+
+        # Test 0.44.0 Release - version followed by "Release"
+        result = parse_version("0.44.0 Release")
+        assert result.version_scheme == "semver"
+        assert result.parseable is True
+        assert result.major_version == 0
+        assert result.minor_version == 44
+        assert result.patch_version == 0
 
 
 if __name__ == "__main__":
